@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron')
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain } = require('electron')
 const path = require('path')
 
 let mainWindow
@@ -55,9 +55,25 @@ function createTray() {
   tray.on('click', () => mainWindow.show())
 }
 
+function setupIPC() {
+  ipcMain.on('window-minimize', () => mainWindow?.minimize())
+  ipcMain.on('window-maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize()
+    } else {
+      mainWindow?.maximize()
+    }
+  })
+  ipcMain.on('window-close', () => mainWindow?.close())
+  ipcMain.handle('window-is-maximized', () => mainWindow?.isMaximized())
+  mainWindow?.on('maximize', () => mainWindow?.webContents.send('window-maximize-change', true))
+  mainWindow?.on('unmaximize', () => mainWindow?.webContents.send('window-maximize-change', false))
+}
+
 app.whenReady().then(() => {
   createWindow()
   createTray()
+  setupIPC()
 })
 
 app.on('window-all-closed', () => {
